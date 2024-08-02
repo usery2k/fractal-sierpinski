@@ -1,4 +1,3 @@
-// my_point.c
 #include "my_point.h"
 
 Point crear_punto(int x, int y) {

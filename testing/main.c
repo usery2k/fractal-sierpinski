@@ -1,64 +1,87 @@
 #include <SDL2/SDL.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
+#include <stdbool.h>
 #include "my_point.h"
 
-const int WINDOW_WIDTH = 640;
-const int WINDOW_HEIGHT = 480;
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 480
 
-void dibujar_1_punto(SDL_Renderer *renderer, int x, int y) {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE); // Color blanco
+SDL_Renderer* renderer;
+
+// x e y representan la posicion del pixel que se pintara negro.
+// Considerar que la ventana es de 640x480
+void dibujar_1_punto(int x, int y) {
     SDL_RenderDrawPoint(renderer, x, y);
+    SDL_RenderPresent(renderer);
 }
 
-int main() {
-    int NUM_PUNTOS;
-    printf("Ingrese el número de puntos: ");
-    scanf("%d", &NUM_PUNTOS);
-
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL no pudo inicializarse. SDL_Error: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    SDL_Window *window = SDL_CreateWindow("SDL Puntos", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
-    if (!window) {
-        printf("Ventana no pudo ser creada. SDL_Error: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        SDL_DestroyWindow(window);
-        printf("Renderizador no pudo ser creado. SDL_Error: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
-
+int main(int argc, char ** argv) {
+    // Semilla aleatoria
     srand(time(NULL));
+    
+    // Variables
+    bool quit = false;
+    SDL_Event event;
 
-    Point* puntos = malloc(NUM_PUNTOS * sizeof(Point));
-    for (int i = 0; i < NUM_PUNTOS; i++) {
-        puntos[i] = crear_punto(rand() % WINDOW_WIDTH, rand() % WINDOW_HEIGHT);
+    // variables de nuestro poligono
+    int n;
+    printf("Ingrese el número de vértices del polígono: ");
+    scanf("%d", &n);
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // arreglo de n puntos que representan a una figura de n vertices
+    Point vertices[n];
+    for (int i = 0; i < n; i++) {
+        // Calcular las coordenadas de los vértices
+        float angle = 2 * M_PI * i / n;
+        int x = (int)(SCREEN_WIDTH / 2 + (SCREEN_WIDTH / 4) * cos(angle));
+        int y = (int)(SCREEN_HEIGHT / 2 + (SCREEN_HEIGHT / 4) * sin(angle));
+        vertices[i] = crear_punto(x, y);
+        dibujar_1_punto(x, y); // Dibujar los vértices
     }
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // Se inicializa la librería SDL (Para dibujar)
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Window * window = SDL_CreateWindow("Proyecto de ALP - UBB",
+        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+    renderer = SDL_CreateRenderer(window, -1, 0);
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE); // Fondo negro
+    
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    // Se pinta toda la pantalla de negro
     SDL_RenderClear(renderer);
+    
+    // color rojo para los puntos
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
-    for (long i = 0; i < 100000; i++) {
-        SDL_Event e;
-        if (SDL_PollEvent(&e) && e.type == SDL_QUIT) break;
+    // puntos iniciales iniciados de manera random
+    Point punto_actual = vertices[rand() % n];
 
-        int indice_punto = rand() % NUM_PUNTOS;
-        dibujar_1_punto(renderer, puntos[indice_punto].x, puntos[indice_punto].y);
+    while (!quit) {
+        // Se esperan 10 ms antes de continuar
+        SDL_Delay(10);
 
-        SDL_RenderPresent(renderer);
-        SDL_Delay(10); // Pequeña pausa para no sobrecargar el CPU
+        // Se verifica si se apreta el botón para cerrar la ventana
+        SDL_PollEvent(&event);
+        switch (event.type) {
+            case SDL_QUIT:
+                quit = true;
+                break;
+        }
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // Elegir un nuevo punto aleatorio de los vértices del polígono
+        Point nuevo_punto = vertices[rand() % n];
+
+        // Actualizar el punto actual al punto medio entre este y el nuevo punto aleatorio
+        punto_actual = div_escalar(suma_puntos(punto_actual, nuevo_punto), 2.0);
+
+        // Dibujar el nuevo punto
+        dibujar_1_punto(punto_actual.x, punto_actual.y);
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     }
 
-    free(puntos);
+    // Limpiar variables de SDL
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
