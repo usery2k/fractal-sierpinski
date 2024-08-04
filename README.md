@@ -1,1 +1,1 @@
-# proyectoUBB
+# Fractal de Sierpinsk
